@@ -4,6 +4,8 @@ import { ClarificationAgent } from "./clarification-agent";
 import { RestaurantDiscoveryAgent } from "./restaurant-discovery-agent";
 import { EvidenceVerificationAgent } from "./evidence-verification-agent";
 import { TrustConfidenceAgent } from "./trust-confidence-agent";
+import { MapGenerationAgent, MapData } from "./map-generation-agent";
+import { ExportAgent, ExportResult, ExportFormat } from "./export-agent";
 import { RecommendationAgent } from "./recommendation-agent";
 
 /**
@@ -21,6 +23,8 @@ export class AgentPipeline {
   private discoveryAgent = new RestaurantDiscoveryAgent();
   private evidenceAgent = new EvidenceVerificationAgent();
   private trustAgent = new TrustConfidenceAgent();
+  private mapAgent = new MapGenerationAgent();
+  private exportAgent = new ExportAgent();
   private recommendationAgent = new RecommendationAgent();
 
   private state: PipelineState = {
@@ -33,6 +37,8 @@ export class AgentPipeline {
     evidence: [],
     confidenceScores: [],
     recommendations: [],
+    mapData: null,
+    exportResult: null,
     error: null,
   };
 
@@ -153,7 +159,16 @@ export class AgentPipeline {
       // This is the "Too few results?" decision point from the diagram
     }
 
-    // Step 6: Generate Recommendations
+    // Step 6: Map Generation
+    this.updateState({ currentAgent: "map_generation" });
+    const confidenceMap = new Map(scores.map((s) => [s.restaurantId, s.overall]));
+    const mapData = await this.mapAgent.process(trustedRestaurants, intent, confidenceMap);
+    this.updateState({ mapData });
+
+    // Step 7: Export
+    this.updateState({ currentAgent: "export" });
+
+    // Step 8: Generate Recommendations
     this.updateState({ currentAgent: "recommendation" });
     const recommendations = await this.recommendationAgent.process(
       trustedRestaurants,
@@ -161,13 +176,31 @@ export class AgentPipeline {
       scores,
       intent
     );
+
+    // Run export after recommendations are ready
+    const exportResult = await this.exportAgent.process(recommendations, "json");
     this.updateState({
       recommendations,
+      exportResult,
       status: "complete",
       currentAgent: null,
     });
 
     return recommendations;
+  }
+
+  /**
+   * Export recommendations in a specific format
+   */
+  async export(format: ExportFormat): Promise<ExportResult> {
+    return this.exportAgent.process(this.state.recommendations, format);
+  }
+
+  /**
+   * Get map data from the pipeline state
+   */
+  getMapData(): MapData | null {
+    return this.state.mapData;
   }
 
   private updateState(partial: Partial<PipelineState>): void {

@@ -69,6 +69,34 @@ export interface Recommendation {
   warnings: string[];
 }
 
+export interface MapMarkerData {
+  restaurantId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  confidence: number;
+  dietaryOptions: string[];
+  googleMapsUrl: string;
+}
+
+export interface MapData {
+  center: { lat: number; lng: number };
+  zoom: number;
+  markers: MapMarkerData[];
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+}
+
+export interface ExportResultData {
+  format: "json" | "text" | "csv";
+  content: string;
+  filename: string;
+}
+
 export interface PipelineState {
   status: AgentStatus;
   currentAgent: AgentName | null;
@@ -79,6 +107,8 @@ export interface PipelineState {
   evidence: Evidence[];
   confidenceScores: ConfidenceScore[];
   recommendations: Recommendation[];
+  mapData: MapData | null;
+  exportResult: ExportResultData | null;
   error: string | null;
 }
 

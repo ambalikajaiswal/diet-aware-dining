@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       status: "complete",
       recommendations,
+      parsedIntent: state.parsedIntent,
+      mapData: state.mapData,
       metadata: {
         totalFound: state.restaurants.length,
         verified: state.evidence.filter((e) => e.verified).length,

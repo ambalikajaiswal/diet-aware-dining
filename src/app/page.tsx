@@ -1,34 +1,41 @@
 "use client";
 
 import { useState } from "react";
+import { useAppStore } from "@/store";
+import { LandingPage } from "@/components/LandingPage";
 import { SearchForm } from "@/components/SearchForm";
 import { ClarificationDialog } from "@/components/ClarificationDialog";
-import { AgentStatus } from "@/components/AgentStatus";
-import { ResultsList } from "@/components/ResultsList";
+import { InterpretationView } from "@/components/InterpretationView";
+import { ResultsMapView } from "@/components/ResultsMapView";
+import { RestaurantDetails } from "@/components/RestaurantDetails";
+import { EvidenceView } from "@/components/EvidenceView";
+import { SavedRecentView } from "@/components/SavedRecentView";
+import { Navigation } from "@/components/Navigation";
 import {
   AgentName,
   ClarificationQuestion,
   DietaryRequest,
-  Recommendation,
 } from "@/types";
 
-type AppState =
-  | { phase: "search" }
+type ProcessingState =
+  | { phase: "idle" }
   | { phase: "processing"; currentAgent: AgentName }
   | {
       phase: "clarification";
       questions: ClarificationQuestion[];
       originalRequest: DietaryRequest;
     }
-  | {
-      phase: "results";
-      recommendations: Recommendation[];
-      metadata: { totalFound: number; verified: number; avgConfidence: number };
-    }
   | { phase: "error"; message: string };
 
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>({ phase: "search" });
+  const currentPage = useAppStore((s) => s.currentPage);
+  const setPage = useAppStore((s) => s.setPage);
+  const setResults = useAppStore((s) => s.setResults);
+  const addRecentSearch = useAppStore((s) => s.addRecentSearch);
+
+  const [processingState, setProcessingState] = useState<ProcessingState>({
+    phase: "idle",
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSearch = async (data: {
@@ -39,18 +46,10 @@ export default function Home() {
     cuisinePreferences: string[];
   }) => {
     setIsLoading(true);
-    setAppState({ phase: "processing", currentAgent: "dietary_intent" });
+    setPage("interpretation");
+    setProcessingState({ phase: "processing", currentAgent: "dietary_intent" });
 
     try {
-      // Simulate agent progression for UI feedback
-      const agents: AgentName[] = [
-        "dietary_intent",
-        "restaurant_discovery",
-        "evidence_verification",
-        "trust_confidence",
-        "recommendation",
-      ];
-
       const request: DietaryRequest = {
         query: data.query,
         location: data.location,
@@ -59,9 +58,10 @@ export default function Home() {
         cuisinePreferences: data.cuisinePreferences,
       };
 
-      // Animate through agents
-      for (const agent of agents.slice(0, 2)) {
-        setAppState({ phase: "processing", currentAgent: agent });
+      // Animate through early agents
+      const earlyAgents: AgentName[] = ["dietary_intent", "restaurant_discovery"];
+      for (const agent of earlyAgents) {
+        setProcessingState({ phase: "processing", currentAgent: agent });
         await delay(600);
       }
 
@@ -74,31 +74,43 @@ export default function Home() {
       const result = await response.json();
 
       if (result.status === "awaiting_clarification") {
-        setAppState({
+        setProcessingState({
           phase: "clarification",
           questions: result.clarificationNeeded,
           originalRequest: request,
         });
+        setPage("search");
       } else if (result.status === "complete") {
-        // Show remaining agents animating
-        for (const agent of agents.slice(2)) {
-          setAppState({ phase: "processing", currentAgent: agent });
-          await delay(400);
+        // Animate remaining agents
+        const lateAgents: AgentName[] = [
+          "evidence_verification",
+          "trust_confidence",
+          "map_generation",
+          "export",
+          "recommendation",
+        ];
+        for (const agent of lateAgents) {
+          setProcessingState({ phase: "processing", currentAgent: agent });
+          await delay(300);
         }
 
-        setAppState({
-          phase: "results",
-          recommendations: result.recommendations,
-          metadata: result.metadata,
-        });
+        setResults(
+          result.recommendations,
+          result.mapData || null,
+          result.parsedIntent || null,
+          result.metadata
+        );
+        addRecentSearch(request, result.recommendations.length);
+        setProcessingState({ phase: "idle" });
+        setPage("results");
       } else {
-        setAppState({
+        setProcessingState({
           phase: "error",
           message: result.error || "Something went wrong",
         });
       }
     } catch {
-      setAppState({
+      setProcessingState({
         phase: "error",
         message: "Failed to connect to the server",
       });
@@ -108,41 +120,47 @@ export default function Home() {
   };
 
   const handleClarification = async (answers: Record<string, string>) => {
-    if (appState.phase !== "clarification") return;
+    if (processingState.phase !== "clarification") return;
 
     setIsLoading(true);
-    setAppState({ phase: "processing", currentAgent: "restaurant_discovery" });
+    setPage("interpretation");
+    setProcessingState({ phase: "processing", currentAgent: "restaurant_discovery" });
 
     try {
       const response = await fetch("/api/clarify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          originalRequest: appState.originalRequest,
+          originalRequest: processingState.originalRequest,
           answers,
         }),
       });
 
       const result = await response.json();
 
-      // Animate through remaining agents
       const remainingAgents: AgentName[] = [
         "evidence_verification",
         "trust_confidence",
+        "map_generation",
+        "export",
         "recommendation",
       ];
       for (const agent of remainingAgents) {
-        setAppState({ phase: "processing", currentAgent: agent });
-        await delay(400);
+        setProcessingState({ phase: "processing", currentAgent: agent });
+        await delay(300);
       }
 
-      setAppState({
-        phase: "results",
-        recommendations: result.recommendations,
-        metadata: result.metadata,
-      });
+      setResults(
+        result.recommendations,
+        result.mapData || null,
+        result.parsedIntent || null,
+        result.metadata
+      );
+      addRecentSearch(processingState.originalRequest, result.recommendations.length);
+      setProcessingState({ phase: "idle" });
+      setPage("results");
     } catch {
-      setAppState({
+      setProcessingState({
         phase: "error",
         message: "Failed to process clarification",
       });
@@ -151,74 +169,59 @@ export default function Home() {
     }
   };
 
-  const handleReset = () => {
-    setAppState({ phase: "search" });
-    setIsLoading(false);
-  };
-
   return (
-    <main className="min-h-screen py-12 px-4">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          🥗 DietaryAI
-        </h1>
-        <p className="text-gray-600 max-w-md mx-auto">
-          AI-powered restaurant recommendations based on your dietary needs.
-          Verified across Yelp, Google Reviews, and Reddit.
-        </p>
-      </div>
+    <div className="min-h-screen pb-16">
+      {/* Page Content */}
+      <main className="py-6 px-4">
+        {currentPage === "landing" && <LandingPage />}
 
-      <div className="space-y-6">
-        {/* Search form (always visible on search/error phase) */}
-        {(appState.phase === "search" || appState.phase === "error") && (
-          <SearchForm onSubmit={handleSearch} isLoading={isLoading} />
-        )}
-
-        {/* Error message */}
-        {appState.phase === "error" && (
-          <div className="w-full max-w-2xl mx-auto">
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-              {appState.message}
+        {currentPage === "search" && (
+          <div className="space-y-6">
+            <div className="text-center mb-4">
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                🥗 Dietary Maps AI
+              </h1>
+              <p className="text-gray-600 text-sm">
+                Describe what you need in natural language
+              </p>
             </div>
+
+            {processingState.phase === "clarification" ? (
+              <ClarificationDialog
+                questions={processingState.questions}
+                onSubmit={handleClarification}
+              />
+            ) : (
+              <SearchForm onSubmit={handleSearch} isLoading={isLoading} />
+            )}
+
+            {processingState.phase === "error" && (
+              <div className="w-full max-w-2xl mx-auto">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                  {processingState.message}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Agent processing status */}
-        {appState.phase === "processing" && (
-          <AgentStatus
-            currentAgent={appState.currentAgent}
-            status="processing"
-          />
-        )}
+        {currentPage === "interpretation" &&
+          processingState.phase === "processing" && (
+            <InterpretationView currentAgent={processingState.currentAgent} />
+          )}
 
-        {/* Clarification dialog */}
-        {appState.phase === "clarification" && (
-          <ClarificationDialog
-            questions={appState.questions}
-            onSubmit={handleClarification}
-          />
-        )}
+        {currentPage === "results" && <ResultsMapView />}
 
-        {/* Results */}
-        {appState.phase === "results" && (
-          <>
-            <ResultsList
-              recommendations={appState.recommendations}
-              metadata={appState.metadata}
-            />
-            <div className="text-center">
-              <button
-                onClick={handleReset}
-                className="px-6 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
-              >
-                ← New Search
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+        {currentPage === "details" && <RestaurantDetails />}
+
+        {currentPage === "evidence" && <EvidenceView />}
+
+        {currentPage === "saved" && <SavedRecentView />}
+      </main>
+
+      {/* Global Navigation */}
+      <Navigation />
+    </div>
   );
 }
 
