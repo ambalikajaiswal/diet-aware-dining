@@ -201,11 +201,11 @@ The UI follows the "Dietary Maps AI" prototype from the Miro board (Trojans team
 
 ## 📝 Example Queries
 
-- `"Vegan sushi spot with high-protein options near Downtown"`
-- `"Late-night halal burgers, gluten-free buns available"`
-- `"Nut-free dessert places within 5 miles of Amsterdam"`
-- `"Jain-friendly Indian restaurant open on Sundays"`
-- `"Keto-friendly Korean BBQ in Los Angeles"`
+- `"Vegan sushi spot with high-protein options near Downtown LA"`
+- `"Late-night halal burgers in Santa Monica, gluten-free buns available"`
+- `"Nut-free dessert places within 5 miles of Seattle"`
+- `"Jain-friendly Indian restaurant open on Sundays in Los Angeles"`
+- `"Keto-friendly Korean BBQ near Venice Beach"`
 
 ---
 
