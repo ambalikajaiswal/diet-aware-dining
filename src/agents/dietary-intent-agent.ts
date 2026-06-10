@@ -126,7 +126,7 @@ export class DietaryIntentAgent {
     const lowered = location.toLowerCase();
 
     if (ambiguousTerms.some((term) => lowered.includes(term))) return true;
-    if (location.split(" ").length < 2 && !location.includes(",")) return true;
+    if (location.trim().length < 3) return true; // Too short to be a real location
 
     return false;
   }

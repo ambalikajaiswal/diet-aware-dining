@@ -58,7 +58,6 @@ export default function Home() {
         cuisinePreferences: data.cuisinePreferences,
       };
 
-      // Animate through early agents
       const earlyAgents: AgentName[] = ["dietary_intent", "restaurant_discovery"];
       for (const agent of earlyAgents) {
         setProcessingState({ phase: "processing", currentAgent: agent });
@@ -81,7 +80,6 @@ export default function Home() {
         });
         setPage("search");
       } else if (result.status === "complete") {
-        // Animate remaining agents
         const lateAgents: AgentName[] = [
           "evidence_verification",
           "trust_confidence",
@@ -170,19 +168,42 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen bg-slate-50">
+      {/* Desktop Header */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-primary-500 text-xl">📍</span>
+            <span className="text-xl font-bold text-gray-900">Dietary Maps AI</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-6">
+            <NavLink active={currentPage === "landing"} onClick={() => setPage("landing")}>Home</NavLink>
+            <NavLink active={currentPage === "search"} onClick={() => setPage("search")}>Search</NavLink>
+            <NavLink active={currentPage === "results"} onClick={() => setPage("results")}>Results</NavLink>
+            <NavLink active={currentPage === "evidence"} onClick={() => setPage("evidence")}>Evidence</NavLink>
+            <NavLink active={currentPage === "saved"} onClick={() => setPage("saved")}>Saved</NavLink>
+          </nav>
+          <button
+            onClick={() => setPage("search")}
+            className="px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-full transition-colors"
+          >
+            Search Now
+          </button>
+        </div>
+      </header>
+
       {/* Page Content */}
-      <main className="py-6 px-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentPage === "landing" && <LandingPage />}
 
         {currentPage === "search" && (
-          <div className="space-y-6">
-            <div className="text-center mb-4">
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">
-                🥗 Dietary Maps AI
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">
+                What are you craving?
               </h1>
-              <p className="text-gray-600 text-sm">
-                Describe what you need in natural language
+              <p className="text-gray-500 mt-1">
+                Describe your dietary needs in plain language
               </p>
             </div>
 
@@ -196,10 +217,8 @@ export default function Home() {
             )}
 
             {processingState.phase === "error" && (
-              <div className="w-full max-w-2xl mx-auto">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-                  {processingState.message}
-                </div>
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                {processingState.message}
               </div>
             )}
           </div>
@@ -219,9 +238,62 @@ export default function Home() {
         {currentPage === "saved" && <SavedRecentView />}
       </main>
 
-      {/* Global Navigation */}
-      <Navigation />
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-400 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-primary-500">📍</span>
+                <span className="text-lg font-bold text-white">Dietary Maps AI</span>
+              </div>
+              <p className="text-sm">
+                Discover restaurants that match your complex dietary needs — powered by AI, navigated with Google Maps.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-200 mb-3">Navigation</h4>
+              <div className="space-y-2 text-sm">
+                <button onClick={() => setPage("landing")} className="block hover:text-white transition-colors">Home</button>
+                <button onClick={() => setPage("search")} className="block hover:text-white transition-colors">Search</button>
+                <button onClick={() => setPage("results")} className="block hover:text-white transition-colors">Results Map</button>
+                <button onClick={() => setPage("evidence")} className="block hover:text-white transition-colors">Evidence & Trust</button>
+                <button onClick={() => setPage("saved")} className="block hover:text-white transition-colors">Saved & Recent</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-200 mb-3">Data Sources</h4>
+              <div className="space-y-2 text-sm">
+                <p>OpenStreetMap via Overpass API</p>
+                <p>Nominatim Geocoding</p>
+                <p>Community-verified dietary tags</p>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-700 mt-8 pt-6 text-xs text-center text-gray-500">
+            © 2024 Dietary Maps AI. Data from OpenStreetMap contributors.
+          </div>
+        </div>
+      </footer>
+
+      {/* Mobile Navigation (hidden on desktop) */}
+      <div className="md:hidden">
+        <Navigation />
+      </div>
     </div>
+  );
+}
+
+function NavLink({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-sm font-medium transition-colors ${
+        active ? "text-primary-600" : "text-gray-600 hover:text-gray-900"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
