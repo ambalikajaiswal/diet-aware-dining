@@ -4,6 +4,10 @@ A multi-agent AI system that discovers restaurants matching complex dietary need
 
 > "Halal food with gluten-free options near USC" → Real restaurants, confidence-scored, with Google Maps directions.
 
+## 🌐 Live Demo
+
+**https://diet-aware-dining.vercel.app**
+
 ---
 
 ## ✨ Features
@@ -229,5 +233,4 @@ This project is open source under the [MIT License](LICENSE).
 
 - [OpenStreetMap](https://www.openstreetmap.org) contributors for the restaurant data
 - [Overpass API](https://overpass-api.de) for the free query engine
-- Miro + Kiro for design-to-code workflow
 - Built at Hackathon 2026 by Team Trojans
